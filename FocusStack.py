@@ -69,7 +69,7 @@ def align_images(images):
         detector = cv2.ORB(1000)
 
     #   We assume that image 0 is the "base" image and align everything to it
-    print "Detecting features of base image"
+    print "Detecting features of base image: {}".format(images[0])
     outimages.append(images[0])
     image1gray = cv2.cvtColor(images[0],cv2.COLOR_BGR2GRAY)
     image_1_kp, image_1_desc = detector.detectAndCompute(image1gray, None)
