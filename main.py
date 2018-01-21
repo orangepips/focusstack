@@ -40,47 +40,56 @@ def parse_args(args):
     )
     parser.add_argument('--input', metavar='input',  help='input directory containing image files to merge', default='input')
     parser.add_argument('--output', metavar='output', help='output file name', default='merged')
+    parser.add_argument('--debug', dest='debug', help='Generate debug output and show on screen', action="store_true")
+    parser.set_defaults(debug=False)
     return parser.parse_args(args)
 
 
-def gather_image_files(input_dir):
+def gather_image_file_names(input_dir):
     """
     Generate an array of .png, .jpg and/or .jpeg files from the specified input directory
     :param input_dir: directory to read file names from
-    :return: array of file names in sorted order
-    >>> gather_image_files("input")
+    :return: array of image file names in sorted order
+    >>> gather_image_file_names("input")
     ['step0.jpg', 'step1.jpg', 'step2.jpg', 'step3.jpg', 'step4.jpg', 'step5.jpg']
     """
-    image_files = sorted(os.listdir(input_dir))
-    for img in image_files:
+    image_file_names = sorted(os.listdir(input_dir))
+    for img in image_file_names:
         if img.split(".")[-1].lower() not in ["jpg", "jpeg", "png"]:
-            image_files.remove(img)
+            image_file_names.remove(img)
 
-    return image_files
+    return image_file_names
 
 
-def merge_and_focus_images(image_files, input_dir):
+def read_image_files(image_file_names, input_dir):
     """
     Read image files into memory and use to generate a singular focused image object represented as a numpy array
-    :param image_files: array of image file names to read
+    :param image_file_names: array of image file names to read
     :param input_dir: directory containing image files
-    :return: an X x Y numpy array suitable for writing out to a file via OpenVC
-    >>> merge_and_focus_images(['step0.jpg', 'step1.jpg'], 'input').shape == (1141, 1521, 3)
+    :return: array of numpy arrays representing each image in same order as passed image_file_names
+    an X x Y numpy array suitable for writing out to a file via OpenVC
+    >>> read_image_files(['step0.jpg', 'step1.jpg'], 'input').shape == (1141, 1521, 3)
     True
     """
-    focusimages = []
-    for img in image_files:
-        print "Reading in file {}".format(img)
-        focusimages.append(cv2.imread("{}/{}".format(input_dir, img)))
-
-    return FocusStack.focus_stack(focusimages)
+    image_files = []
+    for image_file_name in image_file_names:
+        print "Reading in file {}".format(image_file_name)
+        image_files.append(cv2.imread("{}/{}".format(input_dir, image_file_name)))
+    return image_files
 
 
 def main():
     args = parse_args(sys.argv[1:])
-    merged_and_focused_image = merge_and_focus_images(gather_image_files(args.input), args.input)
-    cv2.imwrite(args.output + ".png", merged_and_focused_image)
-    print "That's All Folks!"
+    image_file_names = gather_image_file_names(args.input)
+
+    image_files = read_image_files(image_file_names, args.input)
+
+    output_file_name = args.output + ".png"
+    fs = FocusStack.FocusStack(image_files, debug=args.debug)
+    fs.focus()
+    cv2.imwrite(output_file_name, fs.focused_image)
+    print "Done. File '{}' written.".format(output_file_name)
+
 
 if __name__ == "__main__":
     main()
